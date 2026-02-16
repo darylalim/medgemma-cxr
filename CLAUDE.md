@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Streamlit app using Google's MedGemma 1.5 4B to localize anatomical structures in chest X-rays with bounding boxes.
+Streamlit app using Google's MedGemma 1.5 4B for chest X-ray analysis: anatomy localization with bounding boxes and longitudinal comparison of two CXRs.
 
 ## Commands
 
@@ -21,14 +21,22 @@ All commands use the `.venv/bin/` prefix. Use `python -m pytest` (not bare `pyte
 
 ## Architecture
 
-Single-file app (`streamlit_app.py`):
+Single-file app (`streamlit_app.py`) with two modes selected via sidebar radio:
 
+**Localize Anatomy** (bounding box detection):
 ```
 Upload → pad_image_to_square() → run_inference() → parse_bboxes() → draw_bboxes() → display
 ```
 
+**Compare CXRs** (longitudinal comparison):
+```
+Upload 2 images → pad_image_to_square() each → run_comparison() → display text
+```
+
+- `main` — sidebar radio switches between `_localize_ui()` and `_compare_ui()`
 - `pad_image_to_square` — converts to RGB via PIL, pads shorter side with zeros to make a square numpy array
 - `run_inference` — formats `PROMPT_TEMPLATE` with the anatomy name, runs the HuggingFace pipeline
+- `run_comparison` — sends two images with `COMPARISON_PROMPT` to the pipeline, returns free-text comparison
 - `parse_bboxes` — tries four regex patterns in priority order to extract bbox JSON from model output
 - `draw_bboxes` — converts normalized `[0, 1000]` coords to pixels, draws red rectangles and labels
 - `load_model` — cached via `@st.cache_resource`, uses MPS on Apple Silicon with float32 (MPS limitation)
