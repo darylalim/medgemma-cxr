@@ -132,6 +132,39 @@ def run_inference(pipe, image: Image.Image, object_name: str) -> str:
     return response
 
 
+COMPARISON_PROMPT = (
+    "Provide a comparison of these two images and include details "
+    "which students should take note of when reading longitudinal CXR"
+)
+
+
+def run_comparison(pipe, image1: Image.Image, image2: Image.Image) -> str:
+    """Run MedGemma longitudinal comparison on two CXR images."""
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image1},
+                {"type": "image", "image": image2},
+                {"type": "text", "text": COMPARISON_PROMPT},
+            ],
+        }
+    ]
+    output = pipe(
+        text=messages,
+        max_new_tokens=1000,
+        max_length=None,
+        do_sample=False,
+        pad_token_id=pipe.tokenizer.eos_token_id,
+    )
+    response = output[0]["generated_text"][-1]["content"]
+
+    if "<unused95>" in response:
+        response = response.split("<unused95>", 1)[1].lstrip()
+
+    return response
+
+
 # --- Streamlit UI ---
 
 
