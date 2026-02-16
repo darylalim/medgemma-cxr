@@ -169,8 +169,7 @@ def run_comparison(pipe, image1: Image.Image, image2: Image.Image) -> str:
 
 
 def main():
-    st.set_page_config(page_title="CXR Anatomy Localization", layout="wide")
-    st.title("CXR Anatomy Localization")
+    st.set_page_config(page_title="MedGemma CXR", layout="wide")
 
     if not os.environ.get("HF_TOKEN"):
         st.error(
@@ -181,7 +180,19 @@ def main():
         st.stop()
 
     with st.sidebar:
+        mode = st.radio("Mode", ["Localize Anatomy", "Compare CXRs"])
         st.header("Settings")
+
+    if mode == "Localize Anatomy":
+        st.title("CXR Anatomy Localization")
+        _localize_ui()
+    else:
+        st.title("CXR Longitudinal Comparison")
+        _compare_ui()
+
+
+def _localize_ui():
+    with st.sidebar:
         uploaded_file = st.file_uploader(
             "Upload a chest X-ray", type=["png", "jpg", "jpeg"]
         )
@@ -231,6 +242,59 @@ def main():
                 st.text(response)
     else:
         st.info("Upload a chest X-ray image in the sidebar to get started.")
+
+
+def _compare_ui():
+    with st.sidebar:
+        prior_file = st.file_uploader(
+            "Upload prior CXR", type=["png", "jpg", "jpeg"], key="prior"
+        )
+        current_file = st.file_uploader(
+            "Upload current CXR", type=["png", "jpg", "jpeg"], key="current"
+        )
+        compare_button = st.button("Compare", type="primary")
+
+    if prior_file is not None and current_file is not None:
+        try:
+            prior_image = Image.open(prior_file)
+            current_image = Image.open(current_file)
+        except Exception as e:
+            st.error(f"Could not open image: {e}")
+            st.stop()
+
+        col_left, col_right = st.columns(2)
+        with col_left:
+            st.subheader("Prior")
+            st.image(prior_image, width="stretch")
+        with col_right:
+            st.subheader("Current")
+            st.image(current_image, width="stretch")
+
+        if compare_button:
+            prior_array = pad_image_to_square(prior_image)
+            current_array = pad_image_to_square(current_image)
+            prior_square = Image.fromarray(prior_array)
+            current_square = Image.fromarray(current_array)
+
+            with st.spinner("Loading model..."):
+                try:
+                    pipe = load_model()
+                except Exception as e:
+                    st.error(f"Failed to load model: {e}")
+                    st.stop()
+
+            with st.spinner("Comparing images..."):
+                response = run_comparison(pipe, prior_square, current_square)
+
+            st.subheader("Comparison")
+            st.markdown(response)
+
+            with st.expander("Raw model response"):
+                st.text(response)
+    elif prior_file is not None or current_file is not None:
+        st.info("Upload both a prior and current CXR to compare.")
+    else:
+        st.info("Upload two chest X-ray images in the sidebar to get started.")
 
 
 if __name__ == "__main__":
