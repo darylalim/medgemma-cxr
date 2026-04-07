@@ -1,10 +1,10 @@
 # MedGemma Chest X-ray (CXR)
 
-Streamlit app using Google's MedGemma 1.5 4B for chest X-ray analysis: anatomy localization with bounding boxes and longitudinal comparison of two CXRs.
+Streamlit app using Google's MedGemma 1.5 4B (via [mlx-vlm](https://github.com/Blaizzy/mlx-vlm) on Apple Silicon) for chest X-ray analysis: anatomy localization with bounding boxes and longitudinal comparison of two CXRs.
 
 ## Setup
 
-Requires [uv](https://docs.astral.sh/uv/).
+Requires macOS 13.5+ on Apple Silicon and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
