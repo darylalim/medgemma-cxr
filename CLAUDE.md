@@ -8,15 +8,16 @@ Streamlit app using Google's MedGemma 1.5 4B for chest X-ray analysis: anatomy l
 
 ## Commands
 
-All commands use the `.venv/bin/` prefix. Use `python -m pytest` (not bare `pytest`) so `streamlit_app` is importable from the project root.
+Uses `uv` for package and project management. Use `uv run python -m pytest` (not bare `pytest`) so `streamlit_app` is importable from the project root.
 
 ```bash
-.venv/bin/ruff check streamlit_app.py tests/                                  # lint
-.venv/bin/ruff format streamlit_app.py tests/                                 # format
-.venv/bin/ty check streamlit_app.py tests/                                    # type check
-.venv/bin/python -m pytest tests/ -v                                          # test all
-.venv/bin/python -m pytest tests/test_bbox.py::test_parse_bboxes_from_json_block -v  # test one
-.venv/bin/streamlit run streamlit_app.py                                      # run app
+uv sync                                                                       # install deps
+uv run ruff check streamlit_app.py tests/                                     # lint
+uv run ruff format streamlit_app.py tests/                                    # format
+uv run ty check streamlit_app.py tests/                                       # type check
+uv run python -m pytest tests/ -v                                             # test all
+uv run python -m pytest tests/test_bbox.py::test_parse_bboxes_from_json_block -v  # test one
+uv run streamlit run streamlit_app.py                                         # run app
 ```
 
 ## Architecture
