@@ -4,10 +4,10 @@ Streamlit app using Google's MedGemma 1.5 4B for chest X-ray analysis: anatomy l
 
 ## Setup
 
+Requires [uv](https://docs.astral.sh/uv/).
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+uv sync
 ```
 
 Create a `.env` file with your [Hugging Face token](https://huggingface.co/settings/tokens):
@@ -19,7 +19,7 @@ HF_TOKEN=your_token_here
 ## Usage
 
 ```bash
-streamlit run streamlit_app.py
+uv run streamlit run streamlit_app.py
 ```
 
 The app has two modes, selectable via sidebar radio:
@@ -30,8 +30,8 @@ The app has two modes, selectable via sidebar radio:
 ## Development
 
 ```bash
-ruff check streamlit_app.py tests/    # lint
-ruff format streamlit_app.py tests/   # format
-ty check streamlit_app.py tests/      # type check
-python -m pytest tests/ -v            # test
+uv run ruff check streamlit_app.py tests/    # lint
+uv run ruff format streamlit_app.py tests/   # format
+uv run ty check streamlit_app.py tests/      # type check
+uv run python -m pytest tests/ -v            # test
 ```
