@@ -1,0 +1,22 @@
+[project]
+name = "medgemma-cxr"
+version = "0.1.0"
+description = "Streamlit app using MedGemma 1.5 4B for chest X-ray analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate",
+    "numpy",
+    "pillow",
+    "python-dotenv",
+    "streamlit",
+    "torch",
+    "transformers",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "ty",
+]
