@@ -8,11 +8,11 @@ load_dotenv()
 
 import numpy as np
 import streamlit as st
-import torch
+from mlx_vlm import generate, load
+from mlx_vlm.prompt_utils import apply_chat_template
 from PIL import Image, ImageDraw
-from transformers import pipeline
 
-MODEL_ID = "google/medgemma-1.5-4b-it"
+MODEL_ID = "mlx-community/medgemma-1.5-4b-it-bf16"
 BBOX_COLOR = (255, 0, 0)
 BBOX_WIDTH = 3
 
@@ -27,14 +27,10 @@ def pad_image_to_square(image: Image.Image) -> np.ndarray:
     h, w = image_array.shape[:2]
     if h < w:
         dh = w - h
-        image_array = np.pad(
-            image_array, ((dh // 2, dh - dh // 2), (0, 0), (0, 0))
-        )
+        image_array = np.pad(image_array, ((dh // 2, dh - dh // 2), (0, 0), (0, 0)))
     elif w < h:
         dw = h - w
-        image_array = np.pad(
-            image_array, ((0, 0), (dw // 2, dw - dw // 2), (0, 0))
-        )
+        image_array = np.pad(image_array, ((0, 0), (dw // 2, dw - dw // 2), (0, 0)))
     return image_array
 
 
@@ -92,14 +88,8 @@ def draw_bboxes(image: Image.Image, bboxes: list[dict]) -> Image.Image:
 
 @st.cache_resource
 def load_model():
-    """Load MedGemma pipeline once, cached across Streamlit reruns."""
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
-    return pipeline(
-        "image-text-to-text",
-        model=MODEL_ID,
-        model_kwargs=dict(dtype=torch.float32),
-        device=device,
-    )
+    """Load MedGemma model once, cached across Streamlit reruns."""
+    return load(MODEL_ID)
 
 
 PROMPT_TEMPLATE = """Instructions:
@@ -111,20 +101,22 @@ Query:
 Where is the {object_name}? Don't give a final answer without reasoning. Output the final answer in the format "Final Answer: X" where X is a JSON list of objects. The object needs a "box_2d" and "label" key. Answer:"""
 
 
-def run_inference(pipe, image: Image.Image, object_name: str) -> str:
+def run_inference(model, processor, image: Image.Image, object_name: str) -> str:
     """Run MedGemma inference and return the cleaned response text."""
     prompt = PROMPT_TEMPLATE.format(object_name=object_name)
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": image},
-                {"type": "text", "text": prompt},
-            ],
-        }
-    ]
-    output = pipe(text=messages, max_new_tokens=1000, max_length=None, do_sample=False, pad_token_id=pipe.tokenizer.eos_token_id)
-    response = output[0]["generated_text"][-1]["content"]
+    formatted_prompt = apply_chat_template(
+        processor, model.config, prompt, num_images=1
+    )
+    result = generate(
+        model,
+        processor,
+        formatted_prompt,
+        [image],  # type: ignore[arg-type]
+        max_tokens=1000,
+        temperature=0.0,
+        verbose=False,
+    )
+    response = result.text if hasattr(result, "text") else str(result)
 
     if "<unused95>" in response:
         response = response.split("<unused95>", 1)[1].lstrip()
@@ -138,26 +130,21 @@ COMPARISON_PROMPT = (
 )
 
 
-def run_comparison(pipe, image1: Image.Image, image2: Image.Image) -> str:
+def run_comparison(model, processor, image1: Image.Image, image2: Image.Image) -> str:
     """Run MedGemma longitudinal comparison on two CXR images."""
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "image", "image": image1},
-                {"type": "image", "image": image2},
-                {"type": "text", "text": COMPARISON_PROMPT},
-            ],
-        }
-    ]
-    output = pipe(
-        text=messages,
-        max_new_tokens=1000,
-        max_length=None,
-        do_sample=False,
-        pad_token_id=pipe.tokenizer.eos_token_id,
+    formatted_prompt = apply_chat_template(
+        processor, model.config, COMPARISON_PROMPT, num_images=2
     )
-    response = output[0]["generated_text"][-1]["content"]
+    result = generate(
+        model,
+        processor,
+        formatted_prompt,
+        [image1, image2],  # type: ignore[arg-type]
+        max_tokens=1000,
+        temperature=0.0,
+        verbose=False,
+    )
+    response = result.text if hasattr(result, "text") else str(result)
 
     if "<unused95>" in response:
         response = response.split("<unused95>", 1)[1].lstrip()
@@ -221,13 +208,15 @@ def _localize_ui():
 
             with st.spinner("Loading model..."):
                 try:
-                    pipe = load_model()
+                    model, processor = load_model()
                 except Exception as e:
                     st.error(f"Failed to load model: {e}")
                     st.stop()
 
             with st.spinner("Running inference..."):
-                response = run_inference(pipe, square_image, object_name.strip())
+                response = run_inference(
+                    model, processor, square_image, object_name.strip()
+                )
 
             bboxes = parse_bboxes(response)
             if not bboxes:
@@ -278,13 +267,15 @@ def _compare_ui():
 
             with st.spinner("Loading model..."):
                 try:
-                    pipe = load_model()
+                    model, processor = load_model()
                 except Exception as e:
                     st.error(f"Failed to load model: {e}")
                     st.stop()
 
             with st.spinner("Comparing images..."):
-                response = run_comparison(pipe, prior_square, current_square)
+                response = run_comparison(
+                    model, processor, prior_square, current_square
+                )
 
             st.subheader("Comparison")
             st.markdown(response)
