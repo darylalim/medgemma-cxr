@@ -6,7 +6,7 @@ def test_parse_bboxes_from_json_block():
     from streamlit_app import parse_bboxes
 
     response = (
-        'Some reasoning here.\n'
+        "Some reasoning here.\n"
         'Final Answer: ```json[{"box_2d": [100, 200, 300, 400], "label": "right clavicle"}]```'
     )
     result = parse_bboxes(response)
